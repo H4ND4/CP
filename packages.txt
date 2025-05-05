@@ -1,4 +1,1 @@
-nltk punkt
-nltk stopwords
-nltk wordnet
-nltk omw-1.4
+
