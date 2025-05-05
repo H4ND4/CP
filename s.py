@@ -31,6 +31,9 @@ from dotenv import load_dotenv
 import warnings
 warnings.filterwarnings("ignore", category=UserWarning, message="Tried to instantiate class '__path__._path'")
 
+import nest_asyncio
+nest_asyncio.apply()
+
 # Set page config
 st.set_page_config(
     page_title="Sarcasm Detector",
