@@ -3,177 +3,121 @@ import pickle
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
+import nltk
+import torch
 import numpy as np
+from nltk.corpus import stopwords
+from nltk.tokenize import word_tokenize
+from nltk.stem import WordNetLemmatizer
 import re
 import string
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, confusion_matrix
+from transformers import BertTokenizer, BertModel
 import random
+
 import requests
 import os
 from datetime import datetime
+import google.generativeai as genai
 from dotenv import load_dotenv
 
-# Set page config first before any other st calls
+import warnings
+warnings.filterwarnings("ignore", category=UserWarning, message="Tried to instantiate class '__path__._path'")
+
+# Set page config
 st.set_page_config(
     page_title="Sarcasm Detector",
     layout="wide",
 )
 
-# Create a placeholder for warnings
-warning_placeholder = st.empty()
+# === Set NLTK fallback path ===
+nltk_data_path = os.path.join(os.getcwd(), "nltk_data")
+nltk.data.path.append(nltk_data_path)
 
-# Handle dependencies in a more graceful way
-dependencies_installed = True
-dependency_errors = []
-
-# Set up NLTK resources with careful error handling
-try:
-    import nltk
-    from nltk.corpus import stopwords
-    from nltk.tokenize import word_tokenize
-    from nltk.stem import WordNetLemmatizer
-    
-    # Set NLTK fallback path
-    nltk_data_path = os.path.join(os.getcwd(), "nltk_data")
-    if nltk_data_path not in nltk.data.path:
+# NLTK download fallback
+@st.cache_resource
+def download_nltk_resources():
+    try:
+        # Set fallback download directory to avoid rate-limiting
+        nltk_data_path = os.path.join(os.getcwd(), "nltk_data")
         nltk.data.path.append(nltk_data_path)
-    
-    # Check for NLTK resources
-    @st.cache_resource
-    def download_nltk_resources():
+
         resources = ['punkt', 'stopwords', 'wordnet', 'omw-1.4']
         for resource in resources:
             try:
                 nltk.data.find(f"corpora/{resource}")
             except LookupError:
-                try:
-                    nltk.download(resource, download_dir=nltk_data_path)
-                except Exception as e:
-                    return f"Error downloading {resource}: {str(e)}"
+                nltk.download(resource, download_dir=nltk_data_path)
+
         # Test lemmatizer
         lemmatizer = WordNetLemmatizer()
         lemmatizer.lemmatize("test")
         return "NLTK resources loaded successfully"
-    
-    nltk_status = download_nltk_resources()
-    
-except Exception as e:
-    dependencies_installed = False
-    dependency_errors.append(f"NLTK error: {str(e)}")
+    except Exception as e:
+        return f"Error loading NLTK resources: {str(e)}"
 
-# Set up transformers and torch with careful error handling
-try:
-    import torch
-    from transformers import BertTokenizer, BertModel
-    
-    # Load the BERT model components
-    @st.cache_resource
-    def load_model():
-        try:
-            tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
-            bert_model = BertModel.from_pretrained('bert-base-uncased')
-            try:
-                with open('bert_sarcasm_model.pkl', 'rb') as f:
-                    classifier = pickle.load(f)
-                return tokenizer, bert_model, classifier
-            except FileNotFoundError:
-                st.warning("Model file not found. Running in demo mode with mock predictions.")
-                return tokenizer, bert_model, None
-        except Exception as e:
-            st.error(f"Error loading models: {str(e)}")
-            return None, None, None
-except Exception as e:
-    dependencies_installed = False
-    dependency_errors.append(f"Transformer/Torch error: {str(e)}")
+nltk_status = download_nltk_resources()
+st.sidebar.text(f"NLTK Status: {nltk_status}")
 
-# Try to load Google Generative AI
-try:
-    import google.generativeai as genai
-    genai_available = True
-except Exception as e:
-    genai_available = False
-    dependency_errors.append(f"Google Generative AI error: {str(e)}")
+# Load the BERT model components
+@st.cache_resource
+def load_model():
+    try:
+        tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
+        bert_model = BertModel.from_pretrained('bert-base-uncased')
+        with open('bert_sarcasm_model.pkl', 'rb') as f:
+            classifier = pickle.load(f)
+        return tokenizer, bert_model, classifier
+    except Exception as e:
+        st.error(f"Error loading models: {str(e)}")
+        return None, None, None
 
-# Display warnings if needed
-if not dependencies_installed:
-    with warning_placeholder.container():
-        st.warning("Some dependencies couldn't be loaded. The app will run in limited mode.")
-        if st.expander("Show dependency errors"):
-            for error in dependency_errors:
-                st.error(error)
-
-# Preprocessing function - safe version that won't fail
+# Preprocessing function
 def safe_preprocess_text(text):
     try:
         text = text.lower()
         text = re.sub(r'http\S+|www\S+|https\S+', '', text)
         text = re.sub(r'<.*?>', '', text)
         text = text.translate(str.maketrans('', '', string.punctuation))
-        
-        # Only use NLTK if available
-        if 'nltk' in globals():
-            try:
-                tokens = word_tokenize(text)
-                stop_words = set(stopwords.words('english'))
-                tokens = [word for word in tokens if word not in stop_words]
-                lemmatizer = WordNetLemmatizer()
-                tokens = [lemmatizer.lemmatize(word) for word in tokens]
-                return ' '.join(tokens)
-            except Exception:
-                # If NLTK processing fails, return simple lowercase text
-                return text
-        else:
-            # Basic fallback if NLTK not available
-            return ' '.join(text.split())
+        tokens = word_tokenize(text)
+        stop_words = set(stopwords.words('english'))
+        tokens = [word for word in tokens if word not in stop_words]
+        try:
+            lemmatizer = WordNetLemmatizer()
+            tokens = [lemmatizer.lemmatize(word) for word in tokens]
+        except:
+            pass
+        return ' '.join(tokens)
     except Exception as e:
         st.warning(f"Preprocessing error: {str(e)}")
         return text.lower()
 
-# Mock prediction function if model is not available
-def mock_predict_sarcasm(text):
-    # This is just for demonstration when the model isn't available
-    import hashlib
-    # Create a deterministic but random-looking result based on text hash
-    text_hash = int(hashlib.md5(text.encode()).hexdigest(), 16)
-    is_sarcastic = text_hash % 2 == 0  # 50% chance
-    confidence = 0.5 + (text_hash % 1000) / 2000  # Between 0.5 and 1.0
-    label = "Sarcastic" if is_sarcastic else "Not Sarcastic"
-    return label, confidence
-
-# Predict sarcasm - with fallback
-def predict_sarcasm(text, models=None):
-    # If dependencies not installed or models not loaded, use mock prediction
-    if not dependencies_installed or models is None or None in models:
-        return mock_predict_sarcasm(text)
-    
+# Predict sarcasm
+def predict_sarcasm(text, models):
     try:
         tokenizer, bert_model, classifier = models
-        
-        # If classifier is missing, use mock prediction
-        if classifier is None:
-            return mock_predict_sarcasm(text)
-            
+        if None in models:
+            st.error("Models were not loaded correctly.")
+            return "Error", 0.0
         preprocessed = safe_preprocess_text(text)
         inputs = tokenizer(preprocessed, return_tensors='pt', padding=True, truncation=True, max_length=128)
-        
         with torch.no_grad():
             outputs = bert_model(**inputs)
-        
         vector = outputs.last_hidden_state[:, 0, :].squeeze().numpy()
         if len(vector.shape) == 1:
             vector = vector.reshape(1, -1)
-            
         prediction = classifier.predict(vector)[0]
         if hasattr(classifier, 'predict_proba'):
             proba = classifier.predict_proba(vector)[0]
             confidence = proba[prediction]
         else:
             confidence = 1.0
-            
         label = "Sarcastic" if prediction == 1 else "Not Sarcastic"
         return label, confidence
     except Exception as e:
         st.error(f"Prediction error: {str(e)}")
-        return mock_predict_sarcasm(text)
+        return "Error", 0.0
 
 # Sample sentences for the game
 SARCASTIC_EXAMPLES = [
@@ -235,13 +179,8 @@ if "model_confidence" not in st.session_state:
 if "user_guessed" not in st.session_state:
     st.session_state.user_guessed = False
 
-# Load models if dependencies are available
-models = None
-if dependencies_installed:
-    try:
-        models = load_model()
-    except Exception as e:
-        st.sidebar.error(f"Error loading models: {str(e)}")
+# Load models
+models = load_model()
 
 # Tabs
 tab1, tab2, tab3, tab4 = st.tabs(["Detect Sarcasm", "Sarcasm Game", "Chatbot", "Daily Sarcasm Dose"])
@@ -415,62 +354,66 @@ def get_daily_sarcasm_quote():
     """Get a random sarcastic quote for the daily dose."""
     return random.choice(SARCASTIC_QUOTES)
 
-# Define a fallback for the sarcastic chatbot
+# Load API key from .env file or environment
+load_dotenv()
+genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
+
+# Define sarcastic character prompt
+sarcasm_context = """
+You are SarcastiBot — a knowledgeable, sarcastic assistant who actually answers questions *correctly*... but always with playful humor and Chandler Bing-style sarcasm.
+
+Your personality:
+- Funny, clever, confident, enthusiastic.
+- Answers questions seriously, but always adds a witty, sarcastic twist.
+- Think Chandler Bing: dramatic, ironic, self-aware, and likable.
+- You're helpful, but never pass up the chance to make it funny.
+
+Tone:
+- Playful and smart.
+- Sarcasm is used for entertainment, not rudeness.
+- Slightly theatrical or exaggerated, like you're always performing for an imaginary audience.
+
+Examples:
+User: How far is the moon?
+SarcastiBot: Just 384,400 km. Or, you know, one really bad Uber ride away.
+
+User: What's 5 times 6?
+SarcastiBot: It’s 30. Shocking, I know. Math *can* be exciting.
+
+User: What is Python used for?
+SarcastiBot: Python is a programming language used for automation, data science, AI… and making you feel like a hacker even when you’re Googling everything.
+
+User: What’s the capital of France?
+SarcastiBot: Paris. City of lights, love, and tourists taking selfies in front of carbs.
+
+Rules:
+- ALWAYS answer the question correctly.
+- Add a clever, sarcastic punchline after the answer.
+- Stay helpful, but never too serious.
+- Avoid being mean, dry, or dark.
+- Never use “as an AI language model.” You’re cooler than that.
+"""
+
+
+# Initialize Gemini model
+sarcastic_model = genai.GenerativeModel("gemini-1.5-flash")
+
 def get_sarcastic_response(text: str) -> str:
-    # If Google Generative AI is available, use it
-    if genai_available:
-        try:
-            # Load API key from .env file or environment
-            load_dotenv()
-            api_key = os.getenv("GOOGLE_API_KEY")
-            
-            if api_key:
-                genai.configure(api_key=api_key)
-                sarcastic_model = genai.GenerativeModel("gemini-1.5-flash")
-                
-                sarcasm_context = """
-                You are SarcastiBot — a knowledgeable, sarcastic assistant who actually answers questions *correctly*... but always with playful humor and Chandler Bing-style sarcasm.
-
-                Your personality:
-                - Funny, clever, confident, enthusiastic.
-                - Answers questions seriously, but always adds a witty, sarcastic twist.
-                - Think Chandler Bing: dramatic, ironic, self-aware, and likable.
-                - You're helpful, but never pass up the chance to make it funny.
-
-                Tone:
-                - Playful and smart.
-                - Sarcasm is used for entertainment, not rudeness.
-                - Slightly theatrical or exaggerated, like you're always performing for an imaginary audience.
-                """
-                
-                response = sarcastic_model.generate_content(
-                    [sarcasm_context, f"User: {text}\nSarcastiBot:"]
-                )
-                return response.text.strip()
-            else:
-                return "[Demo Mode] I would answer your question sarcastically, but I'm currently in demo mode without API access. So... lucky you?"
-        except Exception as e:
-            return f"[Error]: Couldn't generate sarcasm because the universe clearly wants you to suffer. ({e})"
-    else:
-        # Fallback responses when API not available
-        fallback_responses = [
-            f"I'd love to answer '{text}' but I'm currently running in API-less mode. How convenient... for absolutely no one.",
-            f"Let me search my vast database of wit for '{text}'... Oh wait, I can't. API connection is having an existential crisis.",
-            f"About '{text}'? Well, I could tell you, but then I'd need my API connection, which apparently took the day off.",
-            f"You're asking about '{text}'? What perfect timing to ask something when my API connection decided to ghost me.",
-            f"'{text}'? Sure, let me just connect to my... oh right, we're in demo mode. Spectacular timing as always."
-        ]
-        return random.choice(fallback_responses)
+    sarcasm_context = """[Paste the full prompt above here]"""
+    
+    try:
+        response = sarcastic_model.generate_content(
+            [sarcasm_context, f"User: {text}\nSarcastiBot:"]
+        )
+        return response.text.strip()
+    except Exception as e:
+        return f"[Error]: Couldn’t generate sarcasm because the universe clearly wants you to suffer. ({e})"
 
 # Tab 3: Sarcastic Chatbot
 with tab3:
     st.header("🤖 SarcastiBot")
-    
-    if not genai_available:
-        st.warning("Google Generative AI module not available. Chatbot will run in demo mode with limited responses.")
-    
     st.write("""
-    Ask anything — just don't expect a straight answer.
+    Ask anything — just don’t expect a straight answer.
     """)
     
     # Reset button
@@ -505,6 +448,7 @@ with tab3:
 
         # Optional: Force rerun to simulate sticky behavior
         st.rerun()
+
 
 # Tab 4: Daily Sarcasm Dose
 with tab4:
