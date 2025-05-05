@@ -73,16 +73,9 @@ st.sidebar.text(f"NLTK Status: {nltk_status}")
 @st.cache_resource
 def load_model():
     try:
-        # First try loading from local cache
-        try:
-            tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
-            bert_model = BertModel.from_pretrained('bert-base-uncased')
-        except Exception as e:
-            st.warning(f"Online model load failed: {str(e)}. Trying alternative sources...")
-            # Try loading from different mirror
-            tokenizer = BertTokenizer.from_pretrained('bert-base-uncased', mirror='https://mirrors.aliyun.com/huggingface-models')
-            bert_model = BertModel.from_pretrained('bert-base-uncased', mirror='https://mirrors.aliyun.com/huggingface-models')
-        
+        # Load from local directory
+        tokenizer = BertTokenizer.from_pretrained("models/bert-base-uncased")
+        bert_model = BertModel.from_pretrained("models/bert-base-uncased")
         with open('bert_sarcasm_model.pkl', 'rb') as f:
             classifier = pickle.load(f)
         return tokenizer, bert_model, classifier
