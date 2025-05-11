@@ -25,6 +25,11 @@ from dotenv import load_dotenv
 import warnings
 warnings.filterwarnings("ignore", category=UserWarning, message="Tried to instantiate class '__path__._path'")
 
+nltk.download('punkt')
+nltk.download('punkt_tab')  # Add this line
+nltk.download('stopwords')
+nltk.download('wordnet')
+
 # Set page config
 st.set_page_config(
     page_title="Sarcasm Detector",
