@@ -1,9 +1,3 @@
-import asyncio
-import sys
-
-if sys.platform == "win32" and (3, 8, 0) <= sys.version_info < (3, 9, 0):
-    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
-
 import streamlit as st
 import pickle
 import pandas as pd
@@ -30,9 +24,6 @@ from dotenv import load_dotenv
 
 import warnings
 warnings.filterwarnings("ignore", category=UserWarning, message="Tried to instantiate class '__path__._path'")
-
-import nest_asyncio
-nest_asyncio.apply()
 
 # Set page config
 st.set_page_config(
@@ -69,16 +60,36 @@ def download_nltk_resources():
 nltk_status = download_nltk_resources()
 st.sidebar.text(f"NLTK Status: {nltk_status}")
 
-# Load the BERT model components
-@st.cache_resource
+# # Load the BERT model components
+# @st.cache_resource
+# def load_model():
+#     try:
+#         tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
+#         bert_model = BertModel.from_pretrained('bert-base-uncased')
+#         with open('bert_sarcasm_model.pkl', 'rb') as f:
+#             classifier = pickle.load(f)
+#         return tokenizer, bert_model, classifier
+#     except Exception as e:
+#         st.error(f"Error loading models: {str(e)}")
+#         return None, None, None
+
+# Load the BERT model components with error handling
+@st.cache_resource #shinee
 def load_model():
     try:
-        # Load from local directory
-        tokenizer = BertTokenizer.from_pretrained("models/bert-base-uncased")
-        bert_model = BertModel.from_pretrained("models/bert-base-uncased")
-        with open('bert_sarcasm_model.pkl', 'rb') as f:
-            classifier = pickle.load(f)
-        return tokenizer, bert_model, classifier
+        # Modified to handle PyTorch warnings
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", message="Tried to instantiate class '__path__._path'")
+            tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
+            bert_model = BertModel.from_pretrained('bert-base-uncased')
+        
+        try:
+            with open('bert_sarcasm_model.pkl', 'rb') as f:
+                classifier = pickle.load(f)
+            return tokenizer, bert_model, classifier
+        except FileNotFoundError:
+            st.error("Model file 'bert_sarcasm_model.pkl' not found. Please make sure it exists in the current directory.")
+            return None, None, None
     except Exception as e:
         st.error(f"Error loading models: {str(e)}")
         return None, None, None
