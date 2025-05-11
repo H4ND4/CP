@@ -38,107 +38,49 @@ st.set_page_config(
 nltk_data_path = os.path.join(os.getcwd(), "nltk_data")
 nltk.data.path.append(nltk_data_path)
 
-# # NLTK download fallback
-# @st.cache_resource
-# def download_nltk_resources():
-#     try:
-#         # Set fallback download directory to avoid rate-limiting
-#         nltk_data_path = os.path.join(os.getcwd(), "nltk_data")
-#         os.makedirs(nltk_data_path, exist_ok=True)  # Create directory if it doesn't exist
-#         nltk.data.path.append(nltk_data_path)
-
-#         resources = ['punkt', 'stopwords', 'wordnet', 'omw-1.4', 'punkt_tab']
-#         for resource in resources:
-#             try:
-#                 nltk.data.find(f"tokenizers/{resource}" if resource == 'punkt_tab' else f"corpora/{resource}")
-#             except LookupError:
-#                 nltk.download(resource, download_dir=nltk_data_path)
-
-#         # Test lemmatizer
-#         lemmatizer = WordNetLemmatizer()
-#         lemmatizer.lemmatize("test")
-#         return "NLTK resources loaded successfully"
-#     except Exception as e:
-#         return f"Error loading NLTK resources: {str(e)}"
+# NLTK download fallback
 @st.cache_resource
-def setup_nltk():
+def download_nltk_resources():
     try:
-        # Download only what we need, quietly
-        nltk.download('punkt', quiet=True)
-        nltk.download('stopwords', quiet=True)
-        nltk.download('wordnet', quiet=True)
-        nltk.download('omw-1.4', quiet=True)
-        
-        # Test resources
-        word_tokenize("test")  # Test punkt
-        stopwords.words('english')  # Test stopwords
-        WordNetLemmatizer().lemmatize("test")  # Test lemmatizer
-        return True
+        # Set fallback download directory to avoid rate-limiting
+        nltk_data_path = os.path.join(os.getcwd(), "nltk_data")
+        os.makedirs(nltk_data_path, exist_ok=True)  # Create directory if it doesn't exist
+        nltk.data.path.append(nltk_data_path)
+
+        resources = ['punkt', 'stopwords', 'wordnet', 'omw-1.4', 'punkt_tab']
+        for resource in resources:
+            try:
+                nltk.data.find(f"tokenizers/{resource}" if resource == 'punkt_tab' else f"corpora/{resource}")
+            except LookupError:
+                nltk.download(resource, download_dir=nltk_data_path)
+
+        # Test lemmatizer
+        lemmatizer = WordNetLemmatizer()
+        lemmatizer.lemmatize("test")
+        return "NLTK resources loaded successfully"
     except Exception as e:
-        st.error(f"NLTK setup failed: {str(e)}")
-        return False
+        return f"Error loading NLTK resources: {str(e)}"
 
-# Call this immediately
-nltk_ready = setup_nltk()
-
-# @st.cache_resource #shinee
-# def load_model():
-#     try:
-#         # Modified to handle PyTorch warnings
-#         with warnings.catch_warnings():
-#             warnings.filterwarnings("ignore", message="Tried to instantiate class '__path__._path'")
-#             tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
-#             bert_model = BertModel.from_pretrained('bert-base-uncased')
-        
-#         try:
-#             with open('bert_sarcasm_model.pkl', 'rb') as f:
-#                 classifier = pickle.load(f)
-#             return tokenizer, bert_model, classifier
-#         except FileNotFoundError:
-#             st.error("Model file 'bert_sarcasm_model.pkl' not found. Please make sure it exists in the current directory.")
-#             return None, None, None
-#     except Exception as e:
-#         st.error(f"Error loading models: {str(e)}")
-#         return None, None, None
-@st.cache_resource(show_spinner="Loading AI models... (This may take ~30 seconds)")
-def load_models():
+@st.cache_resource #shinee
+def load_model():
     try:
-        # Load BERT components
-        with st.spinner("Loading BERT model..."):
-            with warnings.catch_warnings():
-                warnings.simplefilter("ignore")
-                tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
-                bert_model = BertModel.from_pretrained('bert-base-uncased')
+        # Modified to handle PyTorch warnings
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", message="Tried to instantiate class '__path__._path'")
+            tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
+            bert_model = BertModel.from_pretrained('bert-base-uncased')
         
-        # Load classifier
-        with st.spinner("Loading classifier..."):
+        try:
             with open('bert_sarcasm_model.pkl', 'rb') as f:
                 classifier = pickle.load(f)
-                
-        return tokenizer, bert_model, classifier
+            return tokenizer, bert_model, classifier
+        except FileNotFoundError:
+            st.error("Model file 'bert_sarcasm_model.pkl' not found. Please make sure it exists in the current directory.")
+            return None, None, None
     except Exception as e:
-        st.error(f"Model loading failed: {str(e)}")
+        st.error(f"Error loading models: {str(e)}")
         return None, None, None
 
-@st.cache_resource
-def init_chatbot():
-    load_dotenv()
-    genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
-    return genai.GenerativeModel("gemini-1.5-flash")
-def main():
-    # Initialize models (cached)
-    models = load_models()
-    sarcastic_model = init_chatbot() if 'GOOGLE_API_KEY' in os.environ else None
-    
-    # Rest of your app code remains the same...
-    # [Keep all your existing tab definitions and UI code here]
-
-if __name__ == "__main__":
-    if nltk_ready:  # Only run app if NLTK loaded successfully
-        main()
-    else:
-        st.error("Failed to initialize required NLP resources. Please check the logs.")
-        #ene hurtl
 # Preprocessing function
 def safe_preprocess_text(text):
     try:
