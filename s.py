@@ -60,7 +60,7 @@ nltk.data.path.append(nltk_data_path)
 #         return "NLTK resources loaded successfully"
 #     except Exception as e:
 #         return f"Error loading NLTK resources: {str(e)}"
- @st.cache_resource
+@st.cache_resource
 def setup_nltk():
     try:
         # Download only what we need, quietly
