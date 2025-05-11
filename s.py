@@ -36,17 +36,41 @@ nltk_data_path = os.path.join(os.getcwd(), "nltk_data")
 nltk.data.path.append(nltk_data_path)
 
 # NLTK download fallback
+# @st.cache_resource
+# def download_nltk_resources():
+#     try:
+#         # Set fallback download directory to avoid rate-limiting
+#         nltk_data_path = os.path.join(os.getcwd(), "nltk_data")
+#         nltk.data.path.append(nltk_data_path)
+
+#         resources = ['punkt', 'stopwords', 'wordnet', 'omw-1.4']
+#         for resource in resources:
+#             try:
+#                 nltk.data.find(f"corpora/{resource}")
+#             except LookupError:
+#                 nltk.download(resource, download_dir=nltk_data_path)
+
+#         # Test lemmatizer
+#         lemmatizer = WordNetLemmatizer()
+#         lemmatizer.lemmatize("test")
+#         return "NLTK resources loaded successfully"
+#     except Exception as e:
+#         return f"Error loading NLTK resources: {str(e)}"
+
+# nltk_status = download_nltk_resources()
+# st.sidebar.text(f"NLTK Status: {nltk_status}")
 @st.cache_resource
 def download_nltk_resources():
     try:
         # Set fallback download directory to avoid rate-limiting
         nltk_data_path = os.path.join(os.getcwd(), "nltk_data")
+        os.makedirs(nltk_data_path, exist_ok=True)  # Create directory if it doesn't exist
         nltk.data.path.append(nltk_data_path)
 
-        resources = ['punkt', 'stopwords', 'wordnet', 'omw-1.4']
+        resources = ['punkt', 'stopwords', 'wordnet', 'omw-1.4', 'punkt_tab']
         for resource in resources:
             try:
-                nltk.data.find(f"corpora/{resource}")
+                nltk.data.find(f"tokenizers/{resource}" if resource == 'punkt_tab' else f"corpora/{resource}")
             except LookupError:
                 nltk.download(resource, download_dir=nltk_data_path)
 
@@ -56,10 +80,6 @@ def download_nltk_resources():
         return "NLTK resources loaded successfully"
     except Exception as e:
         return f"Error loading NLTK resources: {str(e)}"
-
-nltk_status = download_nltk_resources()
-st.sidebar.text(f"NLTK Status: {nltk_status}")
-
 # # Load the BERT model components
 # @st.cache_resource
 # def load_model():
