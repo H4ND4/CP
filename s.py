@@ -231,7 +231,7 @@ with tab1:
     st.markdown("---")
     st.header("About this App")
     st.write("""
-   🎭 Think you're good at detecting sarcasm?
+    Think you're good at detecting sarcasm?
 Welcome to your new favorite app – where words get decoded and sarcasm gets exposed.
 
 Just type in a sentence and instantly see if it's dripping with sarcasm or just being real.
@@ -419,7 +419,7 @@ def get_sarcastic_response(text: str) -> str:
 
 # Tab 3: Sarcastic Chatbot
 with tab3:
-    st.header("🤖 SarcastiBot")
+    st.header("SarcastiBot")
     st.write("""
     Ask anything — just don’t expect a straight answer.
     """)
@@ -460,7 +460,7 @@ with tab3:
 
 # Tab 4: Daily Sarcasm Dose
 with tab4:
-    st.header("💊 Daily Sarcasm Dose")
+    st.header("Daily Sarcasm Dose")
 
     # Initialize session state for the quote
     if "daily_quote" not in st.session_state:
