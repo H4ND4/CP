@@ -1,30 +1,34 @@
-import streamlit as st
-import pickle
-import pandas as pd
-import nltk
-import torch
-import numpy as np
-from nltk.corpus import stopwords
-from nltk.tokenize import word_tokenize
-from nltk.stem import WordNetLemmatizer
-import re
-import string
-from sklearn.model_selection import train_test_split
-from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, confusion_matrix
-from transformers import BertTokenizer, BertModel
-import random
-
-import requests
-import os
-from datetime import datetime
-import google.generativeai as genai
-from dotenv import load_dotenv
-
-import warnings
+import streamlit as st  # App interface
+import pickle  # Model handling
+import pandas as pd  # Data manipulation
+import nltk  # Natural Language Toolkit
+import torch  # Deep learning
+import numpy as np  # Numerical operations
+from nltk.corpus import stopwords  # Stopword removal
+from nltk.tokenize import word_tokenize  # Tokenization
+from nltk.stem import WordNetLemmatizer  # Lemmatization
+import re  # Regular expressions
+import string  # String operations
+from sklearn.model_selection import train_test_split  # Train-test split
+from sklearn.metrics import accuracy_score  # Accuracy metric
+from sklearn.metrics import precision_score  # Precision metric
+from sklearn.metrics import recall_score  # Recall metric
+from sklearn.metrics import f1_score  # F1-score metric
+from sklearn.metrics import confusion_matrix  # Confusion matrix
+from transformers import BertTokenizer  # Tokenizer for BERT
+from transformers import BertModel  # BERT model
+import random  # Random operations
+import requests  # HTTP requests
+import os  # Operating system interface
+from datetime import datetime  # Date and time
+import google.generativeai as genai  # Generative AI (Gemini)
+from dotenv import load_dotenv  # Load environment variables
+import warnings  # Warning control
 warnings.filterwarnings("ignore", category=UserWarning, message="Tried to instantiate class '__path__._path'")
 
+# Download necessary NLTK data
 nltk.download('punkt')
-nltk.download('punkt_tab')  # Add this line
+nltk.download('punkt_tab')  
 nltk.download('stopwords')
 nltk.download('wordnet')
 
@@ -34,7 +38,7 @@ st.set_page_config(
     layout="wide",
 )
 
-# === Set NLTK fallback path ===
+# Set NLTK fallback path
 nltk_data_path = os.path.join(os.getcwd(), "nltk_data")
 nltk.data.path.append(nltk_data_path)
 
@@ -44,7 +48,7 @@ def download_nltk_resources():
     try:
         # Set fallback download directory to avoid rate-limiting
         nltk_data_path = os.path.join(os.getcwd(), "nltk_data")
-        os.makedirs(nltk_data_path, exist_ok=True)  # Create directory if it doesn't exist
+        os.makedirs(nltk_data_path, exist_ok=True)  
         nltk.data.path.append(nltk_data_path)
 
         resources = ['punkt', 'stopwords', 'wordnet', 'omw-1.4', 'punkt_tab']
@@ -61,10 +65,10 @@ def download_nltk_resources():
     except Exception as e:
         return f"Error loading NLTK resources: {str(e)}"
 
-@st.cache_resource #shinee
+@st.cache_resource 
 def load_model():
     try:
-        # Modified to handle PyTorch warnings
+        # To handle PyTorch warnings
         with warnings.catch_warnings():
             warnings.filterwarnings("ignore", message="Tried to instantiate class '__path__._path'")
             tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
@@ -127,7 +131,7 @@ def predict_sarcasm(text, models):
         st.error(f"Prediction error: {str(e)}")
         return "Error", 0.0
 
-# Sample sentences for the game
+# Sample sentences for the gme
 SARCASTIC_EXAMPLES = [
     "Oh, I'm so glad it's Monday again, my favorite day!",
     "Wow, getting stuck in traffic was the highlight of my day.",
@@ -193,7 +197,7 @@ models = load_model()
 # Tabs
 tab1, tab2, tab3, tab4 = st.tabs(["Detect Sarcasm", "Sarcasm Game", "Chatbot", "Daily Sarcasm Dose"])
 
-# Tab 1: Detect Sarcasm & About
+# Tab 1: Detect Sarcasm and About
 with tab1:
     st.header("Detect Sarcasm")
     user_input = st.text_area("Type or paste text here:", value=st.session_state.user_input, height=150)
@@ -356,6 +360,16 @@ SARCASTIC_QUOTES = [
     {"quote": "I'm not arguing, I'm just explaining why I'm right.", "author": "Unknown"},
     {"quote": "I'm multitasking: I can listen, ignore and forget all at once.", "author": "Unknown"},
     {"quote": "Don't worry about what people think. They don't do it very often.", "author": "Unknown"}
+    {"quote": "I have nothing to lose but my mind.", "author": "Unknown"},
+    {"quote": "I’m trying to see things from your point of view, but I can’t get my head that far up my own ass.", "author": "Unknown"},
+    {"quote": "My imaginary friend says you have serious issues.", "author": "Unknown"},
+    {"quote": "I clapped because it's over, not because I liked it.", "author": "Unknown"},
+    {"quote": "Oh, I offended you with my opinion? You should hear the ones I keep to myself.", "author": "Unknown"},
+    {"quote": "I’m not great at advice. Can I interest you in a sarcastic comment?", "author": "Chandler Bing"},
+    {"quote": "You're not stupid; you just have bad luck thinking.", "author": "Unknown"},
+    {"quote": "You bring everyone so much joy… when you leave the room.", "author": "Unknown"},
+    {"quote": "Your secrets are safe with me. I never even listen when you tell me them.", "author": "Unknown"},
+    {"quote": "I’d explain it to you, but I left my crayons at home.", "author": "Unknown"},
 ]
 
 def get_daily_sarcasm_quote():
@@ -439,7 +453,7 @@ with tab3:
             with st.chat_message(message["role"]):
                 st.markdown(message["content"])
 
-    # Always place this last so it stays at the bottom
+   # For making it stay at the bottom at all times:
     prompt = st.chat_input("Type something to SarcastiBot...")
 
     if prompt:
@@ -523,6 +537,17 @@ with tab4:
         "The '/s' symbol is commonly used online to denote sarcasm in text-based communication.",
         "People with certain cognitive conditions may find it harder to detect sarcasm in conversation.",
         "The 'sarcasm mark' (؟) was proposed as a punctuation mark specifically for indicating sarcastic statements."
+        "Sarcasm often relies on tone, context, and shared knowledge—making it hard for AI and even people to detect in writing.",
+        "Psychologists consider sarcasm a form of 'complex communication' because it often means the opposite of what's said.",
+        "Sarcasm is often used as a social tool to express humor, criticism, or affection without being direct.",
+        "Frequent use of sarcasm can be linked to higher verbal intelligence and cognitive flexibility.",
+        "British and American cultures tend to use sarcasm more than many other cultures, especially in casual conversation.",
+        "The brain processes sarcastic remarks more slowly than literal ones due to the extra interpretation involved.",
+        "People are more likely to detect sarcasm when they know the speaker personally or understand their usual tone.",
+        "In corporate emails or texts, sarcasm can easily lead to miscommunication and is usually discouraged.",
+        "Sarcasm is more common in spoken language, but the rise of memes has helped it thrive in digital text.",
+        "Neuroscientific studies show the right hemisphere of the brain plays a key role in understanding sarcasm."
+
     ]
 
     with st.expander("Did You Know? Sarcasm Facts"):
