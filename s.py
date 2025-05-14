@@ -359,7 +359,7 @@ SARCASTIC_QUOTES = [
     {"quote": "Sometimes I need what only you can provide: your absence.", "author": "Ashleigh Brilliant"},
     {"quote": "I'm not arguing, I'm just explaining why I'm right.", "author": "Unknown"},
     {"quote": "I'm multitasking: I can listen, ignore and forget all at once.", "author": "Unknown"},
-    {"quote": "Don't worry about what people think. They don't do it very often.", "author": "Unknown"}
+    {"quote": "Don't worry about what people think. They don't do it very often.", "author": "Unknown"},
     {"quote": "I have nothing to lose but my mind.", "author": "Unknown"},
     {"quote": "I’m trying to see things from your point of view, but I can’t get my head that far up my own ass.", "author": "Unknown"},
     {"quote": "My imaginary friend says you have serious issues.", "author": "Unknown"},
@@ -536,7 +536,7 @@ with tab4:
         "Some cultures use sarcasm more frequently than others - it varies widely across different societies.",
         "The '/s' symbol is commonly used online to denote sarcasm in text-based communication.",
         "People with certain cognitive conditions may find it harder to detect sarcasm in conversation.",
-        "The 'sarcasm mark' (؟) was proposed as a punctuation mark specifically for indicating sarcastic statements."
+        "The 'sarcasm mark' (؟) was proposed as a punctuation mark specifically for indicating sarcastic statements.",
         "Sarcasm often relies on tone, context, and shared knowledge—making it hard for AI and even people to detect in writing.",
         "Psychologists consider sarcasm a form of 'complex communication' because it often means the opposite of what's said.",
         "Sarcasm is often used as a social tool to express humor, criticism, or affection without being direct.",
